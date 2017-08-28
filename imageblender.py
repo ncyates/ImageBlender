@@ -6,8 +6,9 @@ from random import shuffle
 from Tkinter import Tk
 from tkFileDialog import askdirectory
 import tkMessageBox
+import time
 
-
+start_time = time.time()
 Tk().withdraw()
 srcDir = askdirectory()
 dstDir = srcDir + '/' + 'results'
@@ -70,3 +71,4 @@ while len(fileNamesList)>1:
 #remList.pop()
 #for in remList:
 #    os.remove(r)
+print("took %s seconds" % (time.time() - start_time))
