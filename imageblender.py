@@ -1,4 +1,5 @@
 import cv2
+import multiprocessing
 from multiprocessing import Process, Queue
 import os
 import math
@@ -85,41 +86,26 @@ if __name__ == "__main__":
 
     q = Queue()
 
-    n = len(fileNamesList)
-    mark1 = n / 8
-    mark2 = n / 4
-    mark3 = 3*mark1
-    mark4 = n / 2
-    mark5 = 5*mark1
-    mark6 = 3*mark2
-    mark7 = 7*mark1
+    procList = []
 
-    p1 = Process(target=blend, args=('p1', q, fileNamesList[0:mark1], dstDir, zeroPad))
-    p2 = Process(target=blend, args=('p2', q, fileNamesList[mark1:mark2], dstDir, zeroPad))
-    p3 = Process(target=blend, args=('p3', q, fileNamesList[mark2:mark3], dstDir, zeroPad))
-    p4 = Process(target=blend, args=('p4', q, fileNamesList[mark3:mark4], dstDir, zeroPad))
-    p5 = Process(target=blend, args=('p5', q, fileNamesList[mark4:mark5], dstDir, zeroPad))
-    p6 = Process(target=blend, args=('p6', q, fileNamesList[mark5:mark6], dstDir, zeroPad))
-    p7 = Process(target=blend, args=('p7', q, fileNamesList[mark6:mark7], dstDir, zeroPad))
-    p8 = Process(target=blend, args=('p8', q, fileNamesList[mark7:n], dstDir, zeroPad))
+    numFiles = len(fileNamesList)
+    numCores = multiprocessing.cpu_count()
+    chunkLength = numFiles / numCores
+    chunkStart = 0
+    chunkEnd = chunkStart + chunkLength
 
-    p1.start()
-    p2.start()
-    p3.start()
-    p4.start()
-    p5.start()
-    p6.start()
-    p7.start()
-    p8.start()
+    segCount = 0
+    for i in range(numCores):
+        procList.append(
+            Process(target=blend, args=('p' + str(i), q, fileNamesList[chunkStart:chunkEnd], dstDir, zeroPad)))
+        chunkStart = chunkEnd
+        chunkEnd = chunkStart + chunkLength
 
-    p1.join()
-    p2.join()
-    p3.join()
-    p4.join()
-    p5.join()
-    p6.join()
-    p7.join()
-    p8.join()
+    for i in range(numCores):
+        procList[i].start()
+
+    for i in range(numCores):
+        procList[i].join()
 
 
     count = 1
