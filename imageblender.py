@@ -12,6 +12,9 @@ import time
 #from PIL import Image,ImageEnhance
 
 
+
+#TODO: does collectall work?
+
 start_time = time.time()
 
 
@@ -53,16 +56,11 @@ def blend(proc, q, fnListSlice, dstDir, zeroPad):
 if __name__ == "__main__":
 
     Tk().withdraw()
-
     srcDir = askdirectory()
-    global dstDir
+    # global dstDir
     dstDir = srcDir + '/' + 'results'
     collectAll = 'C:/_pythonDev/blending/finishedBlends/' + srcDir.split('/')[-1] + '.jpg'
     #print(collectAll)
-
-    #folders = filter(os.path.isdir, [os.path.join(srcDir, f) for f in os.listdir(srcDir)])
-    #for f in folders:
-#        print(f)
 
     try:
         os.mkdir(dstDir)
