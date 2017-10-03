@@ -130,7 +130,7 @@ if __name__ == "__main__":
     numFiles = len(fileNamesList)
     numCores = multiprocessing.cpu_count()
     chunkLength = numFiles / numCores
-    remFiles = numFiles % numCores
+    rmnFiles = numFiles % numCores
     chunkStart = 0
     chunkEnd = chunkStart + chunkLength
     segCount = 0
@@ -143,9 +143,9 @@ if __name__ == "__main__":
         chunkList.append(fileNamesList[chunkStart:chunkEnd])
         chunkStart = chunkEnd
         chunkEnd = chunkStart + chunkLength
-    while remFiles > 0:
-        chunkList[len(chunkList)-1].append(fileNamesList[(len(fileNamesList))-remFiles])
-        remFiles -=1
+    while rmnFiles > 0:
+        chunkList[len(chunkList)-1].append(fileNamesList[(len(fileNamesList)) - rmnFiles])
+        rmnFiles -=1
 
     '''
     # testing all files accounted for
