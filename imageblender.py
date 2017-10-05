@@ -38,8 +38,6 @@ def reducer(process, q, chunk, dstDir, zeroPad, stdDim):
 
 
 def compare(proc, acceptQ, chunk, acceptDir, rejectDir, stdDim):
-
-
     #TODO: test different image sizes / de-noising arguments to optimize performance / quality of similarity evaluation
     simThresh = .60
     optHeight = int(stdDim[0] * .25)
@@ -49,10 +47,10 @@ def compare(proc, acceptQ, chunk, acceptDir, rejectDir, stdDim):
         fileNameB = chunk.pop()
         imageA = cv2.imread(fileNameA, 1)
         imageB = cv2.imread(fileNameB, 1)
-        # if imageA.shape != stdDim:
-        #     imageA = cv2.resize(imageA, (stdDim[1], stdDim[0]))
-        # if imageB.shape != stdDim:
-        #     imageB = cv2.resize(imageB, (stdDim[1], stdDim[0]))
+        if imageA.shape != stdDim:
+            imageA = cv2.resize(imageA, (stdDim[1], stdDim[0]))
+        if imageB.shape != stdDim:
+            imageB = cv2.resize(imageB, (stdDim[1], stdDim[0]))
         try:
             #TODO: implement a try/except block
             grayA = cv2.cvtColor(imageA, cv2.COLOR_BGR2GRAY)
@@ -117,7 +115,7 @@ if __name__ == "__main__":
     numCores = multiprocessing.cpu_count()
 
 
-    ''''''
+    '''
     numFiles = len(fileNames)
     filesChunks = []
     chunkLength = numFiles / numCores
@@ -168,6 +166,7 @@ if __name__ == "__main__":
 
     fileNames = filteredFileNames
     #print(fileNames)
+    '''
 
 
 
@@ -220,4 +219,4 @@ if __name__ == "__main__":
     # for f in os.listdir(destDir): # Comment out to keep all merges on disk
     #     if str(os.path.basename(f)) != '_Final.jpg':
     #         os.remove(destDir + '/' + f)
-    print("took %s seconds" % (time.time() - start_time))
+    print("\n start to finish took %s seconds" % (time.time() - start_time))

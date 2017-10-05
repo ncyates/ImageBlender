@@ -1,19 +1,17 @@
-import cv2
+import multiprocessing
 import os
 import math
-from os import listdir
-##from random import shuffle
-from Tkinter import Tk
-from tkFileDialog import askdirectory
-import tkMessageBox
 import time
-from skimage.measure import compare_ssim as ssim
-import multiprocessing
-from multiprocessing import Process, Queue, Pool
-import os
 import sys
 
-def compare(proc, goodQ, badQ, fnListSlice,dstDirSim,dstDirDif):
+import cv2
+import skimage.measure
+import Tkinter
+import tkFileDialog
+import tkMessageBox
+
+'''
+def compareA(proc, goodQ, badQ, fnListSlice,dstDirSim,dstDirDif):
     #global testlistSim
     #global testlistDif
     imageWidth = int(2592 *.25)
@@ -85,8 +83,57 @@ def compare(proc, goodQ, badQ, fnListSlice,dstDirSim,dstDirDif):
             print "Unexpected error:"
             pass
 
+'''
 
 
+def compareFilter(proc, acceptQ, chunk, acceptDir, rejectDir, stdDim):
+    #TODO: test different image sizes / de-noising arguments to optimize performance / quality of similarity evaluation
+    simThresh = .60
+    optHeight = int(stdDim[0] * .25)
+    optWidth = int(stdDim[1] * .25)
+    while len(chunk) > 1:
+        fileNameA = chunk.pop()
+        fileNameB = chunk.pop()
+        imageA = cv2.imread(fileNameA, 1)
+        imageB = cv2.imread(fileNameB, 1)
+        if imageA.shape != stdDim:
+            imageA = cv2.resize(imageA, (stdDim[1], stdDim[0]))
+        if imageB.shape != stdDim:
+            imageB = cv2.resize(imageB, (stdDim[1], stdDim[0]))
+        try:
+            grayA = cv2.cvtColor(imageA, cv2.COLOR_BGR2GRAY)
+            grayB = cv2.cvtColor(imageB, cv2.COLOR_BGR2GRAY)
+            grayA = cv2.resize(grayA, (optWidth, optHeight))
+            grayB = cv2.resize(grayB, (optWidth, optHeight))
+            grayA = cv2.fastNlMeansDenoising(grayA, None, 6, 7, 21)
+            grayB = cv2.fastNlMeansDenoising(grayB, None, 6, 7, 21)
+            similarity = skimage.measure.compare_ssim(grayA,grayB)
+            sys.stdout.write('\n' + proc + ' comparing ' + str(os.path.basename(fileNameA)) + ' & ' + str(os.path.basename(fileNameB)))
+            sys.stdout.write('\n\tSimilarity is ' + str(similarity))
+            # following code may not eliminate similar images if images are similar on end/start of consecutive chunks
+            if similarity > simThresh:
+                # writing to disk is for testing & verification purposes
+                #rejectQ.put(fileNameB)
+                cv2.imwrite(rejectDir + '/' + os.path.basename(fileNameB), imageB)
+                if len(chunk) > 0:
+                    chunk.append(fileNameA)
+                else:
+                    #acceptQ.put([os.path.basename(fileNameA)])
+                    cv2.imwrite(acceptDir + '/' + os.path.basename(fileNameA), imageA)
+            else:
+                #acceptQ.put([os.path.basename(fileNameA)])
+                cv2.imwrite(acceptDir + '/' + os.path.basename(fileNameA),imageA)
+                if len(chunk) > 0:
+                    chunk.append(fileNameB)
+                else:
+                    #acceptQ.put([os.path.basename(fileNameB)])
+                    cv2.imwrite(acceptDir + '/' + os.path.basename(fileNameB),imageB)
+        except ValueError:
+            print('\tSKIPPING  ' + fileNameA + ' & ' + fileNameB + ' on ValueError')
+            pass
+        except cv2.error:
+            print "Unexpected error:"
+            pass
 
 
 
@@ -94,179 +141,73 @@ def compare(proc, goodQ, badQ, fnListSlice,dstDirSim,dstDirDif):
 
 if __name__ == "__main__":
 
+
     start_time = time.time()
-
-    Tk().withdraw()
-    srcDir = askdirectory()
-
-
-    # global dstDirSim
-    # global dstDirDif
-    dstDirSim = srcDir + '/' + 'resultsSim'
-    dstDirDif = srcDir + '/' + 'resultsDif'
+    Tkinter.Tk().withdraw()
+    sourceDir = tkFileDialog.askdirectory()
+    destDir = sourceDir + '/' + 'results'
 
     try:
-        os.mkdir(dstDirSim)
-        os.mkdir(dstDirDif)
+        os.mkdir(destDir)
     except OSError as e:
         if e.errno == 17:
-            if tkMessageBox.askokcancel('Folder already exists', 'The output folder already exists, proceeding may overwrite the files it contains.'):
-                    pass
+            if tkMessageBox.askokcancel('Folder already exists',
+                                        'The output folder already exists, proceeding may overwrite the files it contains.'):
+                pass
             else:
                 print('Exiting ImageBlender')
                 sys.exit(1)
 
+    fileNames = [sourceDir + '/' + str(f) for f in os.listdir(sourceDir) if f.endswith('.JPG') or f.endswith('.jpg')]
+    sampleImage = cv2.imread(fileNames[0], 1)
+    stdDim = sampleImage.shape  # standard dimensions based on one image. H x W
+    #TODO: what about many different image dimensions? Possibly scan for all and set standard as most common dim
 
-
-    fileNamesList = [srcDir + '/' + str(f) for f in listdir(srcDir) if f.endswith('.JPG') or f.endswith('.jpg')]
-    ##leading zeros to pad file names for output ordering = ceiling of log base 10 of n+1
-    global zeroPad
-    zeroPad = int(math.ceil(math.log(len(fileNamesList) + 1, 10))) + 1
-
-
-
-    #q = Queue()
-    procList = []
-    numFiles = len(fileNamesList)
     numCores = multiprocessing.cpu_count()
+    numFiles = len(fileNames)
+    filesChunks = []
     chunkLength = numFiles / numCores
-    rmnFiles = numFiles % numCores
+    zeroPad = int(math.ceil(math.log(chunkLength + 1, 10))) + 1  # of zeros to pad file names for output ordering
     chunkStart = 0
     chunkEnd = chunkStart + chunkLength
-    segCount = 0
-    goodQ = Queue()
-    badQ = Queue()
+    partialChunk = numFiles % numCores
 
-    # make a list of evenly distributed lists of files, absorb overflow in last list
-    chunkList = []
     for i in range(numCores):
-        chunkList.append(fileNamesList[chunkStart:chunkEnd])
-        chunkStart = chunkEnd
-        chunkEnd = chunkStart + chunkLength
-    while rmnFiles > 0:
-        chunkList[len(chunkList)-1].append(fileNamesList[(len(fileNamesList)) - rmnFiles])
-        rmnFiles -=1
-
-    '''
-    # testing all files accounted for
-        ccount = 0
-        for chunk in chunkList:
-            dcount = 0
-            for c in chunk:
-                print(str(os.path.basename(c)))
-                ccount +=1
-                dcount +=1
-            print(dcount)
-        print(ccount)
-    '''
-
-
-    # for chunk in chunkList:
-    #     procList.append(Process(target = compare, args=(goodQ, badQ, chunk)))
-
-    for i in range(len(chunkList)):
-        procList.append(Process(target = compare, args=('p' + str(i), goodQ, badQ, chunkList[i],dstDirSim,dstDirDif)))
-
-        #procList.append(Process(target=compare, args=('p' + str(i),fileNamesList[chunkStart:chunkEnd], dstDirSim,dstDirDif, zeroPad)))
-        # chunkStart = chunkEnd
-        # chunkEnd = chunkStart + chunkLength
-
-
-    for i in range(len(procList)):
-        procList[i].start()
-
-    for i in range(len(procList)):
-        procList[i].join()
-
-
-    print('\ngood images which are different enough: ' + str(goodQ.qsize()))
-    print('bad images which are not different enough: ' + str(badQ.qsize()))
-    print("took %s seconds" % (time.time() - start_time))
-
-
-
-
-
-
-
-
-'''
-    for i in range(numCores):
-        procList.append(Process(target=compare, args=('p' + str(i),fileNamesList[chunkStart:chunkEnd], dstDirSim,dstDirDif, zeroPad)))
+        filesChunks.append(fileNames[chunkStart:chunkEnd])
         chunkStart = chunkEnd
         chunkEnd = chunkStart + chunkLength
 
+    while partialChunk > 0:
+        filesChunks[len(filesChunks) - 1].append(fileNames[(len(fileNames)) - partialChunk])
+        partialChunk -= 1
 
-    for i in range(numCores):
-        procList[i].start()
-
-    for i in range(numCores):
-        procList[i].join()
-
-    print("took %s seconds" % (time.time() - start_time) + '\n')
-    for s in testlistSim:
-        print(s)
-    for d in testlistDif:
-        print(d)
-
-'''
-
-
-'''    
-    count = 0
-    while len(fileNamesList)>1:
-        imageAPath = fileNamesList.pop()
-        imageBPath = fileNamesList.pop()
-        print(str(imageAPath), str(imageBPath))
-        imageA = cv2.imread(imageAPath, 1)
-        imageB = cv2.imread(imageBPath, 1)
-        try:
-            # make grayscale images for faster de-noising and similarity comparisons, write color images out
-            grayA = cv2.resize(imageA, (2592, 1944))
-            grayB = cv2.resize(imageA, (2592, 1944))
-    
-            grayA = cv2.cvtColor(imageA, cv2.COLOR_BGR2GRAY)
-            grayB = cv2.cvtColor(imageB, cv2.COLOR_BGR2GRAY)
-    
-            grayA = cv2.fastNlMeansDenoising(grayA,None,6,7,21)
-            grayB = cv2.fastNlMeansDenoising(grayB, None, 6, 7, 21)
-    
-            imageSimilarity = ssim(grayA, grayB)
-            print(imageSimilarity)
-    
-            imageA = cv2.resize(imageA, (2592, 1944))
-            imageB = cv2.resize(imageB, (2592, 1944))
-    
-            if imageSimilarity > .55:
-                print("\n\nSIMILAR")
-    
-                #outNameA = dstDirSim + '/' + str(count) + 'a.jpg'
-                outNameB = dstDirSim + '/' + str(count) + 'b.jpg'
-                #outGrayA = dstDirSim + '/' + str(count) + 'GRAYa.jpg'
-                #outGrayB = dstDirSim + '/' + str(count) + 'GRAYb.jpg'
-                #cv2.imwrite(outNameA, imageA)
-                cv2.imwrite(outNameB, imageB)
-                #cv2.imwrite(outGrayA, grayA)
-                #cv2.imwrite(outGrayB, grayB)
-                fileNamesList.append(imageAPath)
-                count += 1
+    acceptQ = multiprocessing.Queue()
+    rejectQ = multiprocessing.Queue()
+    filteredFileNames = []
+    compareProcesses = []
+    acceptDir = destDir + '/' + 'accept'
+    rejectDir = destDir + '/' + 'reject'
+    try:
+        os.mkdir(acceptDir)
+        os.mkdir(rejectDir)
+    except OSError as e:
+        if e.errno == 17:
+            if tkMessageBox.askokcancel('Folder already exists',
+                                        'The output folder already exists, proceeding may overwrite the files it contains.'):
+                pass
             else:
-                outNameA = dstDirDif + '/' + str(count) + 'a.jpg'
-                outNameB = dstDirDif + '/' + str(count) + 'b.jpg'
-                cv2.imwrite(outNameA, imageA)
-                cv2.imwrite(outNameB, imageB)
-                count += 1
-        #similar = ssim(imga,imgb,multichannel = True)
-        except ValueError:
-            print('\tSKIPPING  ' + imageAPath + ' & ' + imageBPath + 'on ValueError')
-            pass
-        except cv2.error:
-            print "Unexpected error:"
-            pass
-    '''
+                print('Exiting ImageBlender')
+                sys.exit(1)
 
-# To retain all merges, comment out below
-#remList.pop()
-#for in remList:
-#    os.remove(r)
+    for i in range(len(filesChunks)):
+        compareProcesses.append(multiprocessing.Process(target=compareFilter, args=(
+        'p' + str(i), acceptQ, filesChunks[i], acceptDir, rejectDir, stdDim)))
+
+    for i in range(len(compareProcesses)):
+        compareProcesses[i].start()
+
+    for i in range(len(compareProcesses)):
+        compareProcesses[i].join()
+
+    sys.stdout.write('\n\tFinished filtering in %s seconds' % (time.time() - start_time))
 
