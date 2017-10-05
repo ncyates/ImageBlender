@@ -91,7 +91,7 @@ if __name__ == "__main__":
     while reducingQ.qsize() > 1:
         wrapUpA = reducingQ.get()
         if reducingQ.qsize() == 2:
-        wrapUpB = reducingQ.get()
+            wrapUpB = reducingQ.get()
             outName = destDir + '/' + '_Final.jpg'
         else:
             outName = destDir + '/' + '_wrapUp' + str(wrapCount) + '.jpg'
