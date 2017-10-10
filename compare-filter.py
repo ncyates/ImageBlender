@@ -1,8 +1,22 @@
+'''
+This module scans the selected directory for image files and then uses multiprocessing to filter the images into one 
+of two sub-directories: 'accept' which holds images that are not too-similar as to dominate the image blend, 
+and 'reject' which holds images that are too similar to the image that came before it and could thus dominate the blend.
+The filtering process works by comparing the structural similarity (SSIM from OpenCV) of two images at a time. 
+If the similarity of 'image A' and 'image B' is above the threshold 'simThresh' (images are too similar), 
+then 'image B' is rejected and 'image A' next gets compared with 'image C' and so on.
+If the similarity of 'image A' and 'image B' is less than or equal to the threshold 'simThresh' (images are not too similar),
+then 'image A' is accepted and 'image B' is compared with 'image C' and so on.
+The module works on the assumption that the likelihood of similarity is highest between consecutive images (since it was
+designed to filter on a sequence of images) based on filename. Thus managing the multiprocessing step dictated that the 
+list of images to compare should be broken into chunks to process to maintain the sequence order of the images (except 
+for on the start/end of chunks)
+'''
+import math
 import multiprocessing
 import os
-import math
-import time
 import sys
+import time
 
 import cv2
 import skimage.measure
@@ -11,9 +25,9 @@ import tkFileDialog
 import tkMessageBox
 
 
-def compareFilter(proc, chunk, acceptDir, rejectDir, stdDim):
+def filterSimilar(process, chunk, acceptDir, rejectDir, stdDim):
     #TODO: test different image sizes / de-noising arguments to optimize performance / quality of similarity evaluation
-    simThresh = .60
+    simThresh = .60 # Value that similarity must be higher than for images to be considered too-similar
     optHeight = int(stdDim[0] * .25)
     optWidth = int(stdDim[1] * .25)
     while len(chunk) > 1:
@@ -33,11 +47,10 @@ def compareFilter(proc, chunk, acceptDir, rejectDir, stdDim):
             grayA = cv2.fastNlMeansDenoising(grayA, None, 6, 7, 21)
             grayB = cv2.fastNlMeansDenoising(grayB, None, 6, 7, 21)
             similarity = skimage.measure.compare_ssim(grayA,grayB)
-            sys.stdout.write('\n' + proc + ' comparing ' + str(os.path.basename(fileNameA)) + ' & ' + str(os.path.basename(fileNameB)))
+            sys.stdout.write('\n' + process + ' comparing ' + str(os.path.basename(fileNameA)) + ' & ' + str(os.path.basename(fileNameB)))
             sys.stdout.write('\n\tSimilarity is ' + str(similarity))
-            # following code may not eliminate similar images if images are similar on end/start of consecutive chunks
+            # following code may not filter out similar images if images are similar on end/start of consecutive chunks
             if similarity > simThresh:
-                # writing to disk is for testing & verification purposes
                 cv2.imwrite(rejectDir + '/' + os.path.basename(fileNameB), imageB)
                 if len(chunk) > 0:
                     chunk.append(fileNameA)
@@ -78,7 +91,6 @@ if __name__ == "__main__":
     sampleImage = cv2.imread(fileNames[0], 1)
     stdDim = sampleImage.shape  # standard dimensions based on one image. H x W
     #TODO: what about many different image dimensions? Possibly scan for all and set standard as most common dim
-
     numCores = multiprocessing.cpu_count()
     numFiles = len(fileNames)
     filesChunks = []
@@ -114,7 +126,7 @@ if __name__ == "__main__":
                 sys.exit(1)
 
     for i in range(len(filesChunks)):
-        compareProcesses.append(multiprocessing.Process(target=compareFilter, args=(
+        compareProcesses.append(multiprocessing.Process(target=filterSimilar, args=(
         'p' + str(i), filesChunks[i], acceptDir, rejectDir, stdDim)))
 
     for i in range(len(compareProcesses)):

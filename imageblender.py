@@ -102,7 +102,8 @@ if __name__ == "__main__":
             print('Problem blending ' + wrapUpA + ' & ' + wrapUpB)
         wrapCount += 1
 
-    # for f in os.listdir(destDir): # Comment out to keep all merges on disk
+    # Comment out next three lines to keep all merges on disk
+    # for f in os.listdir(destDir):
     #     if str(os.path.basename(f)) != '_Final.jpg':
     #         os.remove(destDir + '/' + f)
     print("\n start to finish took %s seconds" % (time.time() - start_time))
