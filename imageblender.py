@@ -15,9 +15,9 @@ def blender(fileNameA, fileNameB, blendName, stdDim):
     imageA = cv2.imread(fileNameA, 1)
     imageB = cv2.imread(fileNameB, 1)
     if imageA.shape != stdDim:
-        imageA.cv2.resize(imageA, (stdDim[1], stdDim[0]))
+        imageA = cv2.resize(imageA, (stdDim[1], stdDim[0]))
     if imageB.shape != stdDim:
-        imageB.cv2.resize(imageB, (stdDim[1], stdDim[0]))
+        imageB = cv2.resize(imageB, (stdDim[1], stdDim[0]))
     blend = cv2.addWeighted(imageA, .5, imageB, .5, 0)
     return cv2.imwrite(blendName, blend)
 
