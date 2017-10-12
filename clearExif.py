@@ -1,3 +1,6 @@
+'''
+Multiprocessing utility to clear EXIF data from .jpg images
+'''
 import sys
 import os
 import multiprocessing

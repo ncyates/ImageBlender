@@ -1,5 +1,5 @@
 '''
-For use with a directory with more than 2*(multiprocessing.cpu_count())
+For use with a directory with more than 2*(multiprocessing.cpu_count()) images
 '''
 import multiprocessing
 import os
