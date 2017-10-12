@@ -1,3 +1,6 @@
+'''
+For use with a directory with more than 2*(multiprocessing.cpu_count())
+'''
 import multiprocessing
 import os
 import math
