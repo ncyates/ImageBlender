@@ -10,9 +10,9 @@ The results from the blending are usually fairly lackluster and gray until an au
 Here are some examples of the generated images
 
 Link to the first video I used as source material: ![My one-second-a-day video project from 2013](https://vimeo.com/87742679)
-![The resulting image after white balance ](https://github.com/ncyates/ImageBlender/blob/master/samples/year2013wb.jpg)
-![The pre-white-balanced image](https://github.com/ncyates/ImageBlender/blob/master/samples/year2013.jpg)
-![Photos from my wedding day](https://github.com/ncyates/ImageBlender/blob/master/samples/weddingDay.jpg)
+[The resulting image after white balance ](https://github.com/ncyates/ImageBlender/blob/master/samples/year2013wb.jpg)
+[The pre-white-balanced image](https://github.com/ncyates/ImageBlender/blob/master/samples/year2013.jpg)
+[Photos from my wedding day](https://github.com/ncyates/ImageBlender/blob/master/samples/weddingDay.jpg)
 
 framegrabber.py will grab frames from a video and write them to a directory.
 compare-filter.py will take a directory of images and exclude those that are too similar to one another.
