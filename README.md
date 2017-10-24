@@ -1,5 +1,5 @@
 # ImageBlender
-This is a collection of python modules that can be run on sets of images to blend them and create an interesting abstract final result.  
+This is a collection of python modules that can be used to create an abstract image made by blending together a collection of images.  
 I was inspired to code this by seeing [Photographs of Films](http://www.jasonshulmanstudio.com/photographs-of-films/) by Jason Shulman - a collection of images made from taking long-exposure photos of films - and after a doing a project learning OpenCV.  
 I imagined I could generate similar results programmatically, so I wrote the code to grab frames from a video (framegrabber.py) and to blend the grabbed frames into one image (imageblender.py).  
 While coding this project, I asked a friend with a large collection of images that document his everyday life for access to his source material so I could experiment with different datasets than just sequential video frames.  
