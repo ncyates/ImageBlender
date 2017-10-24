@@ -24,6 +24,6 @@ Link to the first video I used as source material: [My one-second-a-day video pr
 
 **imageblender.py** will blend the images into a final result.
 
-**smallblend** is a version of the process in imageblender, but for small sets of images that don't need multiprocessing optimization.
+**smallblend.py** is a version of the process in imageblender, but for small sets of images that don't need multiprocessing optimization.
 
 **createVid.py** will create a short video sequence from a directory of images.
