@@ -9,13 +9,10 @@ Some of the modules contained in this repository are a result of the challenges 
 ### Here are some examples of the generated images:
 Link to the first video I used as source material: [My one-second-a-day video project from 2013](https://vimeo.com/87742679)
 
-#### The resulting image from blending all frames grabbed (after white balancing):
-![The resulting image after white balance ](https://github.com/ncyates/ImageBlender/blob/master/samples/year2013wb.jpg)
+#### The resulting image from blending all frames grabbed:
+![The resulting image](https://github.com/ncyates/ImageBlender/blob/master/samples/year2013wb.jpg)
 
-#### The pre-white-balanced image:
-![The pre-white-balanced image](https://github.com/ncyates/ImageBlender/blob/master/samples/year2013.jpg)
-
-#### ImageBlend from my wedding day:
+#### ImageBlend from pictures of my wedding day:
 ![Photos from my wedding day](https://github.com/ncyates/ImageBlender/blob/master/samples/weddingDay.jpg)
 
 **framegrabber.py** will grab frames from a video and write them to a directory.
