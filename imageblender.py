@@ -12,6 +12,7 @@ import cv2
 import Tkinter
 import tkFileDialog
 import tkMessageBox
+import numpy as np
 
 
 def blender(fileNameA, fileNameB, blendName, stdDim):
@@ -37,6 +38,25 @@ def reducer(process, q, chunk, dstDir, zeroPad, stdDim):
             sys.stdout.write('Problem with blending ' + fileNameA + ' & ' + fileNameB)
         count += 1
     q.put(chunk[0])
+
+def colorBal(blendName):
+    unbalanced = cv2.imread(blendName,1)
+    colorChannels = cv2.split(unbalanced)
+    normChannels = []
+    for channel in colorChannels:
+        sortFlat = np.sort(channel.flatten())
+        flatLen = len(sortFlat)
+        lowThresh = sortFlat[int(math.floor(flatLen * .005))]
+        highThresh = sortFlat[int(math.ceil(flatLen * .995))]
+        maskLow = channel < lowThresh
+        maskHigh = channel > highThresh
+        channel = np.ma.array(channel, mask=maskLow, fill_value=lowThresh)
+        channel = channel.filled()
+        channel = np.ma.array(channel, mask=maskHigh, fill_value=highThresh)
+        channel = channel.filled()
+        cv2.normalize(channel, channel, 0, 255, cv2.NORM_MINMAX)
+        normChannels.append(channel)
+    return cv2.merge(normChannels)
 
 
 if __name__ == "__main__":
@@ -105,8 +125,13 @@ if __name__ == "__main__":
             print('Problem blending ' + wrapUpA + ' & ' + wrapUpB)
         wrapCount += 1
 
+    cv2.imwrite(destDir + '/' + '_Final_Balanced.jpg',colorBal(outName))
+
+
+
+
     # Comment out next three lines to keep all merges on disk
     # for f in os.listdir(destDir):
     #     if str(os.path.basename(f)) != '_Final.jpg':
     #         os.remove(destDir + '/' + f)
-    print("\n start to finish took %s seconds" % (time.time() - start_time))
+    print("\n processing took %s seconds" % (time.time() - start_time))
