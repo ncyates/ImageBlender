@@ -12,6 +12,8 @@ import cv2
 import Tkinter
 import tkFileDialog
 import tkMessageBox
+import numpy as np
+
 
 
 Tkinter.Tk().withdraw()
@@ -50,3 +52,21 @@ while len(fileNames) > 1:
     cv2.imwrite(blendName, blend)
     fileNames.insert(0,blendName)
     count += 1
+
+unbalanced = cv2.imread(blendName,1)
+colorChannels = cv2.split(unbalanced)
+normChannels = []
+for channel in colorChannels:
+    sortFlat = np.sort(channel.flatten())
+    flatLen = len(sortFlat)
+    lowThresh = sortFlat[int(math.floor(flatLen * .005))]
+    highThresh = sortFlat[int(math.ceil(flatLen * .995))]
+    maskLow = channel < lowThresh
+    maskHigh = channel > highThresh
+    channel = np.ma.array(channel, mask=maskLow, fill_value=lowThresh)
+    channel = channel.filled()
+    channel = np.ma.array(channel, mask=maskHigh, fill_value=highThresh)
+    channel = channel.filled()
+    cv2.normalize(channel, channel, 0, 255, cv2.NORM_MINMAX)
+    normChannels.append(channel)
+cv2.imwrite(destDir + '/' + '_Final_Balanced.jpg',cv2.merge(normChannels))
